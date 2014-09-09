@@ -64,15 +64,15 @@ public class ExtractRelevantQueriesFromAOL {
 				}
 				line1 = br1.readLine();
 			}
-			System.out.println("------- For line "+c1+" in all-tasks.txt obtained "+c2+" no of matches");
+			//System.out.println("------- For line "+c1+" in all-tasks.txt obtained "+c2+" no of matches");
 			line2 = br2.readLine();
 		}
-		System.out.println("Populated hashmap of queries with "+queries.size()+" no of queries");
+		//System.out.println("Populated hashmap of queries with "+queries.size()+" no of queries");
 		Iterator<Query> itr = queries.values().iterator();
 		while(itr.hasNext())
 		{
 			Query q = itr.next();
-			System.out.println(q.query+"_"+q.userID+"_"+q.urls.size());
+			System.out.println(q.query+"_"+q.userID+"_"+q.urls.size()+"_"+q.getqTime());
 		}
 		
 		FileOutputStream fos = new FileOutputStream("data/AOLtasks/queriesMapFromAOL_Gold");

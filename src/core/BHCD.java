@@ -13,19 +13,35 @@ public class BHCD {
 	public static int tID;
 	public static PriorityQueue<Tree> heap;
 	public static Tree finalTree;
+	
+	public static HashMap<String, Query> queries;
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		tID = 1;
 		forrest = new ArrayList<Tree>();
 		forrestMap = new HashMap<Integer, Tree>();
 		Comparator<Tree> comparator = new NodeComparator();
 		heap = new PriorityQueue<Tree>(10, comparator);
+		queries = new HashMap<String, Query>();
 		
+		buildNetworkFile();
 		importNetworkData();
 		initializeForrest();
 		populateInitialHeap();
 		findHierarchicalCommunities();
 		printHierarchicalTree(finalTree);
+	}
+	
+	public static void buildNetworkFile() throws IOException, ClassNotFoundException
+	{
+		FileInputStream fis = new FileInputStream("data/AOLtasks/queriesMapFromAOL_Gold");
+        ObjectInputStream ois = new ObjectInputStream(fis);
+        queries = (HashMap<String, Query>) ois.readObject();
+        ois.close();
+        
+        System.out.println("Loaded queries hashmap with no of queries: "+queries.size());
+        // now we need to construct the query network & populate the data/network file with the network matrix
+        
 	}
 	
 	public static void printHierarchicalTree(Tree t)
