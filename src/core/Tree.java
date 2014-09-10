@@ -1,8 +1,14 @@
 package core;
+import java.io.Serializable;
 import java.util.*;
+import java.util.Map.Entry;
 
-public class Tree {
+public class Tree implements Serializable {
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	public int treeID;
 	public ArrayList<Node> nodeList; // we assume that the nodeList is always updated with nodes from all the children
 	public ArrayList<Tree> childTrees;
@@ -19,6 +25,8 @@ public class Tree {
 	public Tree X,Y;
 	public double bayesFactorScore;
 	
+	public HashMap<String, Integer> querywords;
+	
 	public Tree(int tID)
 	{
 		this.treeID = tID;
@@ -30,8 +38,52 @@ public class Tree {
 		this.isInitialMerge = false;
 		this.bayesFactorScore = 0.0;
 		this.n1 = 0; this.n0 = 0; this.n1CH = 0; this.n0CH = 0;
+		this.querywords = new HashMap<String, Integer>();
 	}
 	
+	public void populateQueryWords()
+	{
+		this.querywords = new HashMap<String, Integer>();
+		Iterator<Node> itr = this.nodeList.iterator();
+		while(itr.hasNext())
+		{
+			Node n = itr.next();
+			String query = n.q.query;
+			String parts[] = query.split(" ");
+			for(int i=0;i<parts.length;i++)
+			{
+				if(this.querywords.containsKey(parts[i]))
+				{
+					int temp = this.querywords.get(parts[i]);
+					this.querywords.put(parts[i], new Integer(temp+1));
+				}
+				else
+				{
+					this.querywords.put(parts[i], new Integer(1));
+				}
+			}
+		}
+		//System.out.println("Populated tree with "+this.querywords.size()+" query words");
+	}
+	
+	
+	public static <K,V extends Comparable<? super V>> 
+	List<Entry<K, V>> entriesSortedByValues(Map<K,V> map) {
+
+		List<Entry<K,V>> sortedEntries = new ArrayList<Entry<K,V>>(map.entrySet());
+
+		Collections.sort(sortedEntries, 
+				new Comparator<Entry<K,V>>() {
+			@Override
+			public int compare(Entry<K,V> e1, Entry<K,V> e2) {
+				return e2.getValue().compareTo(e1.getValue());
+			}
+		}
+				);
+
+		return sortedEntries;
+	}
+
 	public void addNode(Node n)
 	{
 		this.nodeList.add(n);

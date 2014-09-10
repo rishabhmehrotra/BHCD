@@ -1,4 +1,5 @@
 package core;
+
 import java.io.*;
 import java.util.*;
 
@@ -17,28 +18,40 @@ public class BHCD {
 	public static ArrayList<Query> queryList;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
-		tID = 1;
-		forrest = new ArrayList<Tree>();
-		forrestMap = new HashMap<Integer, Tree>();
-		Comparator<Tree> comparator = new NodeComparator();
 		
-	loadQueryList();
+		int stage = 2;
 		
-		heap = new PriorityQueue<Tree>(sizeNetwork, comparator);
+		if(stage == 1)
+		{
+			tID = 1;
+			forrest = new ArrayList<Tree>();
+			forrestMap = new HashMap<Integer, Tree>();
+			Comparator<Tree> comparator = new NodeComparator();
+			loadQueryList();
+			heap = new PriorityQueue<Tree>(sizeNetwork, comparator);
+			importNetworkData();
+			initializeForrest();
+			populateInitialHeap();
+			findHierarchicalCommunities();
+			System.out.println("Done with FindHierComm... heap size: "+heap.size());
+			saveFinalTree(finalTree);
+		}
+		else
+		{
+			loadFinalTree();
+			printFirstLevelOfFinalTree(finalTree, 0);
+		}
 		
-		//new BuildNetworkFromQueries();
 		
-		
-
-		importNetworkData();
-		initializeForrest();
-		populateInitialHeap();
-		findHierarchicalCommunities();
-		System.out.println("Done with FindHierComm... heap size: "+heap.size());
-		//System.exit(0);
-		saveFinalTree(finalTree);
-		printFirstLevelOfFinalTree(finalTree);
 		//printHierarchicalTree(finalTree);
+	}
+	
+	public static void loadFinalTree() throws IOException, ClassNotFoundException
+	{
+		FileInputStream fis = new FileInputStream("data/finalTreeObtainedbyBHCD");
+        ObjectInputStream ois = new ObjectInputStream(fis);
+        finalTree = (Tree) ois.readObject();
+        ois.close();
 	}
 	
 	public static void saveFinalTree(Tree t) throws IOException
@@ -49,14 +62,38 @@ public class BHCD {
 		fos.close();
 	}
 	
-	public static void printFirstLevelOfFinalTree(Tree t)
+	public static void printFirstLevelOfFinalTree(Tree t, int depth)
 	{
+		if(depth == 4) return;
+		//System.out.println("inside print1stlevel: t: "+t.nodeList.size()+"_"+t.nChildren);
+		//System.out.println("Inside printFirstLevel: childTree size= "+t.childTrees.size());
 		Iterator<Tree> itr = t.childTrees.iterator();
+		Queue<Tree> q = new LinkedList<Tree>();
+		int maxDepth = 4;
+		//System.out.println("----------------------------");
+		System.out.println();
 		while(itr.hasNext())
 		{
 			Tree tt = itr.next();
-			System.out.print(tt.nChildren+"__");
+			tt.populateQueryWords();
+			for(int j =0;j<depth;j++) System.out.print("\t");
+			System.out.println("Tree: "+tt.treeID+"; "+tt.nChildren+" with no of nodes "+tt.nodeList.size()+"__"+tt.entriesSortedByValues(tt.querywords));
+			printFirstLevelOfFinalTree(tt, depth+1);
+			/*Iterator<Tree> itt = tt.childTrees.iterator();
+			while(itt.hasNext())
+			{
+				Tree tt1 = itt.next();
+				System.out.println("\t"+tt1.nChildren+" with no of nodes "+tt1.nodeList.size());
+				Iterator<Tree> itt2 = tt1.childTrees.iterator();
+				while(itt2.hasNext())
+				{
+					Tree tt2 = itt2.next();
+					System.out.println("\t\t"+tt2.nChildren+" with no of nodes "+tt2.nodeList.size());
+				}
+			}*/
+			q.add(tt);
 		}
+		System.out.println();
 	}
 	
 	@SuppressWarnings({ "unchecked", "unchecked" })
@@ -117,8 +154,12 @@ public class BHCD {
 					Tree M = mergeTrees(I, J);
 					heap.add(M);
 					System.out.println("Tree added to the heap: L="+M.likelihood+" S="+M.bayesFactorScore+" X="+M.getX().treeID+" Y="+M.getY().treeID+" noNodes: "+M.nodeList.size());
-					System.out.println("Current Heap Size: "+heap.size()+" no of children in M ryt now: "+M.nodeList.size());
-					if(M.nodeList.size() == sizeNetwork) finalTree = M;
+					System.out.println("Current Heap Size: "+heap.size()+" no of nodes in M ryt now: "+M.nodeList.size()+"__nChildren: "+M.nChildren+" sizeNetwork: "+sizeNetwork);
+					if(M.nodeList.size() == sizeNetwork || M.nodeList.size() == 866)
+					{
+						finalTree = M;
+						System.out.println("Final tree -- "+M.childTrees.size()+"_"+M.nChildren);
+					}
 				}
 			}
 			//else do nothing, the element has already been popped out from the PriorityQueue
