@@ -4,45 +4,73 @@ import java.util.*;
 
 public class BHCD {
 	
-	public static int sizeNetwork = 10;
-	public static String networkDataFile = "data/network";
-	public static double network[][] = new double[sizeNetwork][sizeNetwork];
+	public static int sizeNetwork;
+	public static String networkDataFile = "data/qNetwork";
+	//public static String networkDataFile = "data/network";
+	public static double network[][];// = new double[sizeNetwork][sizeNetwork];
 	public static ArrayList<Tree> forrest;
 	public static HashMap<Integer, Tree> forrestMap;
 	public static double gamma = 0.4, alpha = 1.0, beta = 0.6, delta = 0.2, lambda = 0.4;
 	public static int tID;
 	public static PriorityQueue<Tree> heap;
 	public static Tree finalTree;
-	
-	public static HashMap<String, Query> queries;
+	public static ArrayList<Query> queryList;
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		tID = 1;
 		forrest = new ArrayList<Tree>();
 		forrestMap = new HashMap<Integer, Tree>();
 		Comparator<Tree> comparator = new NodeComparator();
-		heap = new PriorityQueue<Tree>(10, comparator);
-		queries = new HashMap<String, Query>();
 		
-		buildNetworkFile();
+	loadQueryList();
+		
+		heap = new PriorityQueue<Tree>(sizeNetwork, comparator);
+		
+		//new BuildNetworkFromQueries();
+		
+		
+
 		importNetworkData();
 		initializeForrest();
 		populateInitialHeap();
 		findHierarchicalCommunities();
-		printHierarchicalTree(finalTree);
+		System.out.println("Done with FindHierComm... heap size: "+heap.size());
+		//System.exit(0);
+		saveFinalTree(finalTree);
+		printFirstLevelOfFinalTree(finalTree);
+		//printHierarchicalTree(finalTree);
 	}
 	
-	public static void buildNetworkFile() throws IOException, ClassNotFoundException
+	public static void saveFinalTree(Tree t) throws IOException
 	{
-		FileInputStream fis = new FileInputStream("data/AOLtasks/queriesMapFromAOL_Gold");
-        ObjectInputStream ois = new ObjectInputStream(fis);
-        queries = (HashMap<String, Query>) ois.readObject();
-        ois.close();
-        
-        System.out.println("Loaded queries hashmap with no of queries: "+queries.size());
-        // now we need to construct the query network & populate the data/network file with the network matrix
-        
+		FileOutputStream fos = new FileOutputStream("data/finalTreeObtainedbyBHCD");
+		ObjectOutputStream oos = new ObjectOutputStream(fos);
+		oos.writeObject(t);
+		fos.close();
 	}
+	
+	public static void printFirstLevelOfFinalTree(Tree t)
+	{
+		Iterator<Tree> itr = t.childTrees.iterator();
+		while(itr.hasNext())
+		{
+			Tree tt = itr.next();
+			System.out.print(tt.nChildren+"__");
+		}
+	}
+	
+	@SuppressWarnings({ "unchecked", "unchecked" })
+	public static void loadQueryList() throws IOException, ClassNotFoundException
+	{
+		FileInputStream fis = new FileInputStream("data/queriesLISTFromAOL_Gold");
+        ObjectInputStream ois = new ObjectInputStream(fis);
+        queryList = (ArrayList<Query>) ois.readObject();
+        ois.close();
+        System.out.println("Loaded queryList with: "+queryList.size()+" queries");
+        sizeNetwork = queryList.size();
+        network = new double[sizeNetwork][sizeNetwork];
+	}
+	
 	
 	public static void printHierarchicalTree(Tree t)
 	{
@@ -89,12 +117,13 @@ public class BHCD {
 					Tree M = mergeTrees(I, J);
 					heap.add(M);
 					System.out.println("Tree added to the heap: L="+M.likelihood+" S="+M.bayesFactorScore+" X="+M.getX().treeID+" Y="+M.getY().treeID+" noNodes: "+M.nodeList.size());
-					System.out.println("Current Heap Size: "+heap.size());
+					System.out.println("Current Heap Size: "+heap.size()+" no of children in M ryt now: "+M.nodeList.size());
 					if(M.nodeList.size() == sizeNetwork) finalTree = M;
 				}
 			}
 			//else do nothing, the element has already been popped out from the PriorityQueue
 		}
+		System.out.println("Inside FindHierCom function, heap size: "+heap.size());
 	}
 	
 	public static Tree mergeTrees(Tree I, Tree J)
@@ -168,7 +197,7 @@ public class BHCD {
 			M.likelihood = likelihood;
 			M.bayesFactorScore = getBayesFactorScoreForTree(M);
 		}
-		else if(num2 > num1 &&  num2 > num3)
+		else if(num2 >= num1 &&  num2 >= num3)
 		{
 			//J is absorebed into I, so we can neglect M and instead add J as a child of I
 			M.setX(I); M.setY(J);
@@ -191,7 +220,7 @@ public class BHCD {
 			M.likelihood = likelihood;
 			M.bayesFactorScore = getBayesFactorScoreForTree(M);
 		}
-		else if(num3 > num1 &&  num3 > num2)
+		else// if (num3 >= num1 &&  num3 >= num2)
 		{
 			M.setX(I); M.setY(J);
 			M.n1CH = n1CH3; M.n0CH = n0CH3;
@@ -245,13 +274,15 @@ public class BHCD {
 			}
 		}
 		System.out.println("Done with Heap Initialization; "+heap.size()+" trees added to the heap.\n");
+		//System.exit(0);
 	}
 	
 	public static double getBayesFactorScoreForTree(Tree t)
 	{
-		double bfs = 0.0, num=0.0, den=0.0;
+		double bfs = 0.0, num=0.0, den=1; // TODO: den was initially initialized to 0, mae it to 1 on 9th Sept, see if its wrong
 		num = t.likelihood;
 		den = t.getX().likelihood * t.getY().likelihood * t.gXY;
+		if(den == 0) den = 1;
 		bfs = num/den;
 		return bfs;
 	}
@@ -415,13 +446,14 @@ public class BHCD {
 		while(line!=null)
 		{
 			String[] split = line.split("\t");
-			if(split.length != sizeNetwork) System.out.println("Errorrr in here, size of network mismatch with network file");
+			if(split.length != sizeNetwork) System.out.println("Errorrr in here, size of network mismatch with network file "+split.length+"_"+sizeNetwork+"__at__"+count);
 			for(int i=0;i<sizeNetwork;i++)
 			{
 				int n = Integer.parseInt(split[i]);
 				network[count][i] = n;
 			}
 			Node n = new Node(count);
+			n.setQ(queryList.get(count));
 			count++;
 			Tree t = new Tree(tID++);
 			t.addNode(n);
